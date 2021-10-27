@@ -4,6 +4,8 @@
     #include "frida-core.h"
 #endif
 
+#include "globals.h"
+
 #include <syslog.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -242,5 +244,4 @@ void create_communication_map(fuzzer_state_t *fstate);
 void harness_prepare(fuzzer_state_t *fstate);
 void _system_cmd(char *command, bool should_log);
 
-bool verbose;
 #define plog_debug(fmt, args...) if(verbose) plog(fmt, ##args);

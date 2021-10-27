@@ -76,7 +76,7 @@ void on_message(FridaScript *script, const gchar *message, const gchar *data, gp
                 if (payload_obj != NULL && json_object_has_member(payload_obj, "type")) {
                     const gchar *type = json_object_get_string_member(payload_obj, "type");
                     if (type == NULL) return;
-                    // This is the message we would receive if our installed exceptionHandler would 
+                    // This is the message we would receive if our installed exceptionHandler would
                     // be taken. Currently not possible until our GitHub issue is resolved/implemented (see:
                     // https://github.com/frida/frida-gum/issues/484)
                     if (strcmp(type, "crash") == 0) {
@@ -152,14 +152,14 @@ void harness_prepare(fuzzer_state_t *fstate) {
     if (fstate->config->input_mode == INPUT_MODE_CMD) {
         imode_str = "CMD";
     }
-    
+
     sprintf(msg_buf, "[\"frida:rpc\", %lu, \"call\", \"prepare\", [\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%d\"]]",
-            fstate->req_id, comm_mode_str, fmode_str, imode_str, fstate->shm_id, fstate->commap_id, 
+            fstate->req_id, comm_mode_str, fmode_str, imode_str, fstate->shm_id, fstate->commap_id,
             fstate->config->verbose);
     fstate->req_id++;
 
     if (fstate->config->verbose) plog("[*] SEND: %s\n", msg_buf);
-    frida_script_post_sync(fstate->script, msg_buf, NULL, NULL, &error);
+    frida_script_post(fstate->script, msg_buf, NULL);
     if (error != NULL) {
         plog("[!] Error on setup: %s\n", error->message);
         g_error_free(error);
@@ -241,7 +241,9 @@ void create_communication_map(fuzzer_state_t *fstate) {
 
     bzero((void *)fstate->commap, COMMAP_SIZE);
 
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
     strncpy((char *)fstate->commap->sem_name, SEM_NAME_PREFIX, 12);
+#pragma GCC diagnostic pop
     fstate->commap->sem_name[12] = 0;
 
     fstate->exec_sem = _open_sem("exec");
@@ -264,7 +266,7 @@ void _busy_wait_for_exec_finished(fuzzer_state_t *fstate, bool timeout) {
 
     fstate->coverage_time += _stop_measure(cov_timer);
 
-    if (!fstate->exec_finished) { 
+    if (!fstate->exec_finished) {
         plog("[!] fuzz_iteration_in_process_send exec_finished timeout\n");
     }
     fstate->exec_finished = false;
@@ -286,7 +288,7 @@ bool fuzz_iteration_in_process_send(fuzzer_state_t *fstate, uint8_t *buf, uint32
     snprintf(fstate->send_buf, sendbuf_len, "[\"frida:rpc\", %lu, \"call\", \"fuzz\", [\"%s\"]]", fstate->req_id, b64_payload);
     plog_debug("[*] frida post: %s\n", fstate->send_buf);
     // TODO: can we send the payload as raw buffer in the data parameter?
-    frida_script_post_sync(fstate->script, fstate->send_buf, NULL, NULL, &error);
+    frida_script_post(fstate->script, fstate->send_buf, NULL);
     if (error != NULL) {
         plog("[!] Error posting to frida script \"%s\".\n", fstate->send_buf);
         g_error_free(error);
@@ -348,7 +350,7 @@ void _system_cmd(char *command, bool should_log) {
     #endif
 }
 
-// TODO: buf and len are currently unused as the filename of the current iteration 
+// TODO: buf and len are currently unused as the filename of the current iteration
 // is written to the command string that is passed to system()
 bool fuzz_iteration_cmd_send(fuzzer_state_t *fstate, uint8_t *buf, uint32_t len) {
     char *command = fstate->config->command;
