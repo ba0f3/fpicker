@@ -90,8 +90,12 @@ void on_message(FridaScript *script, const gchar *message, const gchar *data, gp
                         if (fstate->skip_cov) {
                             fstate->skip_cov = false;
                         } else {
-                            coverage_t *cov = stdln_parse_coverage_from_json(json_object_get_array_member(payload_obj, "data"));
-                            fstate->last_coverage = cov;
+                            if (json_object_has_member(payload_obj, "data")) {
+                                coverage_t *cov = stdln_parse_coverage_from_json(json_object_get_array_member(payload_obj, "data"));
+                                fstate->last_coverage = cov;
+                            } else {
+                                fstate->last_coverage = NULL;
+                            }
                         }
 
                         fstate->exec_finished = true;
@@ -125,8 +129,17 @@ void on_message(FridaScript *script, const gchar *message, const gchar *data, gp
         if (error_description != NULL && strncmp("HEAPSAN", error_description, 7) == 0) {
             plog("[!] HEAP Exception: %s\n", error_description);
         } else {
-            plog("[->] error: %s\n", message);
-            _signal_exec_finished_with_ret_status(fstate, SIGSEGV);
+            // Issue https://github.com/frida/frida-gum/issues/620
+            // message-dispatcher.js parses unexpected string end, ignore this error
+            // by setting ret_status to 0
+            // TODO apply a real fix, not sure if length issue on our end or in Frida
+            if (strstr(message, "unexpected end of string") != NULL) {
+                plog("[!] Frida's message dispatcher got an unexpected end of string while parsing.\n");
+                _signal_exec_finished_with_ret_status(fstate, 0);
+            } else {
+                plog("[->] error: %s\n", message);
+                _signal_exec_finished_with_ret_status(fstate, SIGSEGV);
+            }
         }
     } else {
         if (fstate->config->verbose) plog("[->] on_message (unknown type): %s\n", message);

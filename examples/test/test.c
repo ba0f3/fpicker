@@ -9,6 +9,8 @@ int stlen(char *a) {
     return strlen(a);
 }
 
+FILE *f;
+
 int bb(char a) {
     if (a == 'a') {
         return 1;
@@ -21,6 +23,9 @@ int bb(char a) {
 }
 
 int proc_fn(char *buf, int len) {
+    f = fopen("/tmp/proc_fn", "a+");
+    fprintf(f, "input: %s, len: %d\n", buf, len);
+    fclose(f);
     char local_buf[32];
 
 #ifdef __APPLE__
@@ -51,7 +56,5 @@ int main(int argc, char** argv) {
     if (argc > 1) proc_fn(argv[1], strlen(argv[1]));
 
     // keep the program running for debugging purposes
-    while(1) {
-        sleep(5);
-    }
+
 }
